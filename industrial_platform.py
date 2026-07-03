@@ -588,10 +588,10 @@ def endpoint_reporte():
 def main() -> None:
     """Arranca el servidor FastAPI/Uvicorn (host/puerto configurables via .env)."""
     import uvicorn
+    import os
 
-    log.info("Iniciando SIPIA API REST en http://%s:%s", API_HOST, API_PORT)
-    uvicorn.run(app, host=API_HOST, port=API_PORT, log_level=os.environ.get("SIPIA_LOG_LEVEL", "info").lower())
+    # Si está en Render usa su puerto, si no, usa el tuyo por defecto
+    puerto_render = int(os.environ.get("PORT", API_PORT))
 
-
-if __name__ == "__main__":
-    main()
+    log.info("Iniciando SIPIA API REST")
+    uvicorn.run(app, host="0.0.0.0", port=puerto_render, log_level=os.environ.get("SIPIA_LOG_LEVEL", "info").lower())
