@@ -95,6 +95,13 @@
   input[type=range] { width: 130px; accent-color: var(--blue); }
 
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+  .panel-paises-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
+  .panel-paises-header .sub { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+  .fila-grave td { color: var(--red); }
+  .fila-moderada td { color: var(--yellow); }
+  .fila-tsunami { box-shadow: inset 3px 0 0 0 #00c2ff; }
+  .cargando-paises td { text-align: center; color: var(--muted); padding: 20px; font-family: var(--mono); }
 </style>
 </head>
 <body>
@@ -146,7 +153,24 @@
   </div>
 </div>
 
+<div class="panel-eventos">
+  <div class="panel-paises-header">
+    <h3>🌎 Países con actividad sísmica ahora (USGS, últimas 24h)</h3>
+    <span class="sub" id="horaActualizacionPaises">Cargando…</span>
+  </div>
+  <div class="tabla-wrap">
+    <table>
+      <thead><tr><th>País</th><th>Sismos</th><th>Magnitud máx.</th><th>Tsunami</th><th>Nivel</th></tr></thead>
+      <tbody id="tablaPaises"><tr class="cargando-paises"><td colspan="5">Cargando datos de países (USGS)…</td></tr></tbody>
+    </table>
+  </div>
+  <div style="margin-top:10px;">
+    <a href="mapa.html" style="color:#3ea6ff; font-size:12px; text-decoration:none;">🗺️ Ver en el mapa mundial &rarr;</a>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
 <script>
 /* ============================================================
    SIPIA Dashboard --- HTML + JavaScript puro (sin dependencias
@@ -154,7 +178,7 @@
    Consume la API REST expuesta por industrial_platform.py
    ============================================================ */
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = "https://sipia-sistema.onrender.com";
 const SENSORES = ["VIB-01", "ACCEL", "GYRO", "TEMP", "PRESS"];
 const MAX_PUNTOS = 30;
 const INTERVALO_MS = 3000;
@@ -391,10 +415,107 @@ function exportarPDF() {
   window.open(`${API_BASE}/reporte`, "_blank");
 }
 
+/* ============================================================
+   Actividad sismica mundial por pais (USGS)
+   Reutiliza la misma logica que mapa.html: descarga el contorno
+   de los paises, descarga los sismos recientes del USGS y asigna
+   cada sismo a su pais con punto-en-poligono (turf.js). Se usa
+   solo para llenar la tabla "Paises con actividad sismica ahora".
+   ============================================================ */
+
+const USGS_FEED = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson";
+const PAISES_GEOJSON_URL = "https://raw.githubusercontent.com/datasets/geo-countries/main/data/countries.geojson";
+const INTERVALO_PAISES_MS = 60000; // 1 minuto, igual que el mapa
+const UMBRAL_GRAVE_PAIS = 4.5;
+
+let geojsonPaisesDashboard = null;
+
+async function cargarGeoJSONPaisesDashboard() {
+  if (geojsonPaisesDashboard) return geojsonPaisesDashboard;
+  const res = await fetch(PAISES_GEOJSON_URL);
+  geojsonPaisesDashboard = await res.json();
+  return geojsonPaisesDashboard;
+}
+
+function pertenecePais(punto, pais) {
+  try {
+    if (pais.geometry.type === "Polygon") {
+      return turf.booleanPointInPolygon(punto, pais.geometry);
+    } else if (pais.geometry.type === "MultiPolygon") {
+      return pais.geometry.coordinates.some(coords =>
+        turf.booleanPointInPolygon(punto, turf.polygon(coords).geometry)
+      );
+    }
+  } catch (e) { /* geometria invalida, se ignora */ }
+  return false;
+}
+
+async function actualizarPaisesConSismos() {
+  const tbody = document.getElementById("tablaPaises");
+  try {
+    const [geojsonPaises, resFeed] = await Promise.all([
+      cargarGeoJSONPaisesDashboard(),
+      fetch(USGS_FEED),
+    ]);
+    const data = await resFeed.json();
+
+    const statsPorPais = {};
+
+    data.features.forEach(f => {
+      const [lon, lat] = f.geometry.coordinates;
+      const mag = f.properties.mag ?? 0;
+      const esTsunami = f.properties.tsunami === 1;
+      const punto = turf.point([lon, lat]);
+
+      for (const pais of geojsonPaises.features) {
+        if (pertenecePais(punto, pais)) {
+          const nombre = pais.properties.name || pais.properties.NAME || "País";
+          if (!statsPorPais[nombre]) statsPorPais[nombre] = { count: 0, maxMag: 0, tsunamis: 0 };
+          statsPorPais[nombre].count += 1;
+          statsPorPais[nombre].maxMag = Math.max(statsPorPais[nombre].maxMag, mag);
+          if (esTsunami) statsPorPais[nombre].tsunamis += 1;
+          break;
+        }
+      }
+    });
+
+    const filas = Object.entries(statsPorPais)
+      .map(([nombre, stats]) => ({ nombre, ...stats }))
+      .sort((a, b) => b.maxMag - a.maxMag || b.count - a.count);
+
+    if (filas.length === 0) {
+      tbody.innerHTML = `<tr class="fila-vacia"><td colspan="5">Sin países con sismos detectados en las últimas 24h</td></tr>`;
+    } else {
+      tbody.innerHTML = filas.map(f => {
+        const grave = f.maxMag >= UMBRAL_GRAVE_PAIS;
+        const clases = [grave ? "fila-grave" : "fila-moderada", f.tsunamis > 0 ? "fila-tsunami" : ""].join(" ").trim();
+        return `<tr class="${clases}">
+          <td>${escapar(f.nombre)}</td>
+          <td>${f.count}</td>
+          <td>${f.maxMag.toFixed(1)}</td>
+          <td>${f.tsunamis > 0 ? `🌊 ${f.tsunamis}` : "—"}</td>
+          <td>${grave ? "⚠ Grave" : "Moderado/Leve"}</td>
+        </tr>`;
+      }).join("");
+    }
+
+    document.getElementById("horaActualizacionPaises").textContent =
+      `Actualizado ${new Date().toLocaleTimeString()} · ${filas.length} país(es) con actividad`;
+
+  } catch (err) {
+    console.error("Error cargando actividad sismica por pais:", err);
+    tbody.innerHTML = `<tr class="cargando-paises"><td colspan="5">No se pudo cargar la actividad sísmica mundial. Reintentando…</td></tr>`;
+    document.getElementById("horaActualizacionPaises").textContent = "Error de conexión con USGS";
+  }
+}
+
 /* --- Inicializacion --- */
 SENSORES.forEach(crearTarjetaSensor);
 actualizarDashboard();
 cicloNormal();
+
+actualizarPaisesConSismos();
+setInterval(actualizarPaisesConSismos, INTERVALO_PAISES_MS);
 </script>
 </body>
 </html>

@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>SIPIA - Mapa de Sismos por Pais</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root { --bg:#0e1621; --panel:#16202c; --border:#22303f; --text:#e6edf3; --muted:#8b98a5; }
+  * { box-sizing: border-box; }
+  body { margin:0; background: var(--bg); color: var(--text); font-family:"Segoe UI",Arial,sans-serif; }
+  header { padding: 14px 24px; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
+  header h1 { margin:0; font-size:20px; }
+  header a:hover { text-decoration: underline; }
+  .leyenda { display:flex; gap:16px; font-size:12px; color: var(--muted); flex-wrap:wrap; }
+  .leyenda span { display:flex; align-items:center; gap:6px; }
+  .punto { width:14px; height:14px; border-radius:4px; display:inline-block; border:1px solid rgba(255,255,255,.25); }
+  #mapa { height: calc(100vh - 62px); width: 100%; }
+  .info-sismo b { color: #3ea6ff; }
+  .leaflet-popup-content-wrapper { background: var(--panel); color: var(--text); }
+  .leaflet-popup-tip { background: var(--panel); }
+  .etiqueta-pais {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    text-shadow: 0 0 3px #000, 0 0 3px #000, 0 0 5px #000;
+    pointer-events: none;
+  }
+  .etiqueta-pais::before { display: none; }
+  .icono-tsunami {
+    font-size: 16px;
+    filter: drop-shadow(0 0 3px #000) drop-shadow(0 0 2px #000);
+  }
+  #cargando {
+    position:absolute; top:75px; left:50%; transform:translateX(-50%);
+    background: var(--panel); border:1px solid var(--border); padding:8px 16px;
+    border-radius:8px; font-size:13px; z-index:1000; color: var(--muted);
+  }
+  .btn-exportar {
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    font-size: 12px; font-weight: 600; padding: 7px 14px; border-radius: 8px;
+    cursor: pointer; white-space: nowrap; transition: filter .15s, transform .1s;
+  }
+  .btn-exportar:hover { filter: brightness(1.25); border-color: #3ea6ff; }
+  .btn-exportar:active { transform: translateY(1px); }
+  .btn-exportar:disabled { opacity: .5; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+    <a href="/" style="color:#3ea6ff; text-decoration:none; font-size:13px; white-space:nowrap;">&larr; Volver al Dashboard</a>
+    <h1>🌍 SIPIA &mdash; Mapa Mundial de Sismos por Pais (USGS)</h1>
+  </div>
+  <div class="leyenda">
+    <span><i class="punto" style="background:#3a4a5c"></i> Sin sismos detectados</span>
+    <span><i class="punto" style="background:#f1c40f"></i> Sismos detectados</span>
+    <span><i class="punto" style="background:#e74c3c"></i> Actividad grave (M &ge; 4.5)</span>
+    <span><i class="punto" style="background:#00c2ff"></i> 🌊 Alerta de tsunami (NOAA/PTWC)</span>
+  </div>
+  <button class="btn-exportar" id="btnExportarCSV" onclick="exportarCSV()">⬇️ Exportar CSV</button>
+</header>
+<div style="padding:6px 24px; font-size:11.5px; color:var(--muted); border-bottom:1px solid var(--border);">
+  Nota: los colores de pais/sismo indican unicamente <b>magnitud sismica</b>. La marca de tsunami usa la bandera oficial de alerta que el propio USGS recibe de los centros NOAA/PTWC (dato real, no estimado). <b>El Nino</b> no se muestra como punto en el mapa porque es un indice climatico regional (temperatura del oceano Pacifico) publicado mensualmente por NOAA, sin coordenadas puntuales que se puedan marcar como un sismo.
+</div>
+
+<div id="mapa"></div>
+<div id="cargando">Cargando datos de paises y sismos (USGS)...</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+<script>
+/* ============================================================
+   SIPIA - Mapa Mundial de Sismos por Pais
+   1) Carga el contorno de todos los paises (GeoJSON publico)
+   2) Carga los sismos recientes desde el feed publico del USGS
+   3) Asigna cada sismo a su pais (punto-en-poligono con turf.js)
+   4) Colorea cada pais segun su nivel de actividad:
+        - Sin datos    -> gris
+        - Detectado    -> amarillo
+        - Grave (>=4.5)-> rojo
+   ============================================================ */
+
+const USGS_FEED = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson";
+const PAISES_GEOJSON_URL = "https://raw.githubusercontent.com/datasets/geo-countries/main/data/countries.geojson";
+const API_BASE = "https://sipia-sistema.onrender.com";
+const INTERVALO_MS = 60000; // 1 minuto
+const UMBRAL_GRAVE = 4.5;
+
+const mapa = L.map("mapa", { worldCopyJump: true, zoomSnap: 0.5 }).setView([-16.5, -64.5], 3);
+
+// Base 1: Satelital (fotografia real, sin nombres de calles)
+const capaSatelital = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+  attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+  maxZoom: 19,
+});
+
+// Base 2: Mapa de calles real (OpenStreetMap) -- muestra departamentos,
+// provincias, ciudades, barrios y calles a medida que haces zoom, igual
+// que Google Maps.
+const capaCalles = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 19,
+});
+
+// Por defecto arrancamos en modo "Calles" para que se vea el detalle real
+// (departamentos, ciudades, calles) apenas el usuario haga zoom.
+capaCalles.addTo(mapa);
+
+L.control.layers(
+  { "🗺️ Calles y Ciudades": capaCalles, "🛰️ Satelital": capaSatelital },
+  {},
+  { position: "topright", collapsed: false }
+).addTo(mapa);
+
+let capaPaises = null;
+let capaSismos = L.layerGroup().addTo(mapa);
+let geojsonPaises = null;
+
+const COLOR_SIN_DATOS = "#3a4a5c";
+const COLOR_DETECTADO = "#f1c40f";
+const COLOR_GRAVE = "#e74c3c";
+
+function colorPorMagnitudPunto(mag) {
+  if (mag >= UMBRAL_GRAVE) return "#e74c3c";
+  if (mag >= 2.5) return "#f1c40f";
+  return "#2ecc71";
+}
+
+function estiloPais(feature) {
+  const stats = feature.properties._sipia;
+  let fill = COLOR_SIN_DATOS;
+  let opacidadBase = 0.35;
+  if (stats && stats.count > 0) {
+    fill = stats.maxMag >= UMBRAL_GRAVE ? COLOR_GRAVE : COLOR_DETECTADO;
+    opacidadBase = 0.55;
+  }
+  // A mas zoom (mas cerca), menos opacidad: asi se ven las calles/ciudades
+  // del mapa base en vez de quedar tapadas por el color de actividad.
+  const zoom = mapa.getZoom();
+  let factor = 1;
+  if (zoom >= 9) factor = 0.05;
+  else if (zoom >= 7) factor = 0.25;
+  else if (zoom >= 5) factor = 0.6;
+
+  return {
+    color: "#0e1621",
+    weight: zoom >= 7 ? 0.5 : 1,
+    fillColor: fill,
+    fillOpacity: opacidadBase * factor,
+  };
+}
+
+function popupPais(feature, layer) {
+  const nombre = feature.properties.name || feature.properties.NAME || "Pais";
+  const stats = feature.properties._sipia;
+  let html = `<div class="info-sismo"><b>${nombre}</b><br>`;
+  if (!stats || stats.count === 0) {
+    html += `Sin sismos detectados en las ultimas 24h.`;
+  } else {
+    html += `Sismos detectados: <b>${stats.count}</b><br>`;
+    html += `Magnitud maxima: <b>${stats.maxMag.toFixed(1)}</b><br>`;
+    if (stats.tsunamis > 0) {
+      html += `<span style="color:#00c2ff">🌊 Alertas de tsunami: <b>${stats.tsunamis}</b></span><br>`;
+    }
+    html += stats.maxMag >= UMBRAL_GRAVE
+      ? `<span style="color:#e74c3c">⚠ Actividad grave</span>`
+      : `<span style="color:#f1c40f">Actividad moderada/leve</span>`;
+  }
+  html += `</div>`;
+  layer.bindPopup(html);
+
+  layer.on("mouseover", () => layer.setStyle({ weight: 2, color: "#3ea6ff" }));
+  layer.on("mouseout", () => capaPaises.resetStyle(layer));
+}
+
+// Muestra/oculta las etiquetas de nombres de pais segun el zoom: se ocultan
+// tanto muy alejado (para no amontonar) como muy cerca (porque ahi ya se ven
+// los nombres de ciudades/calles del mapa base y sobrarian).
+function actualizarVisibilidadEtiquetas() {
+  const zoom = mapa.getZoom();
+  const mostrar = zoom >= 4 && zoom < 8;
+  document.querySelectorAll(".etiqueta-pais").forEach(el => {
+    el.style.display = mostrar ? "block" : "none";
+  });
+}
+
+function actualizarEnZoom() {
+  actualizarVisibilidadEtiquetas();
+  if (capaPaises) capaPaises.setStyle(estiloPais);
+}
+
+// Crea una etiqueta de texto (tooltip) por cada pais, ubicada en un punto
+// que SIEMPRE cae dentro de su territorio real (no en el centro del
+// rectangulo que lo envuelve). Esto es clave para paises con archipielagos
+// o partidos por el borde del mapa (ej. Rusia, EEUU, Fiji, Filipinas).
+let capaEtiquetas = L.layerGroup();
+
+function crearEtiquetasPaises() {
+  geojsonPaises.features.forEach(feature => {
+    const nombre = feature.properties.name || feature.properties.NAME || "Pais";
+    let punto;
+    try {
+      punto = turf.pointOnFeature(feature);
+    } catch (e) {
+      return; // geometria invalida, se omite la etiqueta
+    }
+    const [lon, lat] = punto.geometry.coordinates;
+
+    L.tooltip({
+      permanent: true,
+      direction: "center",
+      className: "etiqueta-pais",
+      interactive: false,
+    })
+      .setLatLng([lat, lon])
+      .setContent(nombre)
+      .addTo(capaEtiquetas);
+  });
+}
+
+function radioPorMagnitud(mag) {
+  return Math.max(4, mag * 3.2);
+}
+
+async function cargarPaises() {
+  const res = await fetch(PAISES_GEOJSON_URL);
+  geojsonPaises = await res.json();
+  geojsonPaises.features.forEach(f => { f.properties._sipia = { count: 0, maxMag: 0, tsunamis: 0 }; });
+}
+
+async function cargarYClasificarSismos() {
+  const res = await fetch(USGS_FEED);
+  const data = await res.json();
+
+  // Reset de estadisticas por pais antes de recalcular
+  geojsonPaises.features.forEach(f => { f.properties._sipia = { count: 0, maxMag: 0, tsunamis: 0 }; });
+
+  capaSismos.clearLayers();
+  ultimosSismosDetallados = [];
+
+  data.features.forEach(f => {
+    const [lon, lat, prof] = f.geometry.coordinates;
+    const mag = f.properties.mag ?? 0;
+    const lugar = f.properties.place ?? "Ubicacion desconocida";
+    const tiempo = new Date(f.properties.time).toLocaleString();
+    // El propio feed de USGS marca esta bandera cuando el sismo activo
+    // los centros de alerta de tsunami (NOAA/PTWC). Es dato real, no
+    // una estimacion nuestra.
+    const esTsunami = f.properties.tsunami === 1;
+    const punto = turf.point([lon, lat]);
+
+    ultimosSismosDetallados.push({ mag, lugar, lat, lon, prof, hora: tiempo, tsunami: esTsunami });
+
+    // Punto-en-poligono: buscar a que pais pertenece este sismo
+    for (const pais of geojsonPaises.features) {
+      try {
+        let dentro = false;
+        if (pais.geometry.type === "Polygon") {
+          dentro = turf.booleanPointInPolygon(punto, pais.geometry);
+        } else if (pais.geometry.type === "MultiPolygon") {
+          dentro = pais.geometry.coordinates.some(coords =>
+            turf.booleanPointInPolygon(punto, turf.polygon(coords).geometry)
+          );
+        }
+        if (dentro) {
+          pais.properties._sipia.count += 1;
+          pais.properties._sipia.maxMag = Math.max(pais.properties._sipia.maxMag, mag);
+          if (esTsunami) pais.properties._sipia.tsunamis += 1;
+          break;
+        }
+      } catch (e) { /* geometria invalida, se ignora */ }
+    }
+
+    // Marcador puntual del sismo (ademas del color del pais)
+    const circulo = L.circleMarker([lat, lon], {
+      radius: radioPorMagnitud(mag),
+      fillColor: colorPorMagnitudPunto(mag),
+      color: esTsunami ? "#00c2ff" : "#0e1621",
+      weight: esTsunami ? 3 : 1,
+      fillOpacity: 0.85,
+    });
+    circulo.bindPopup(`
+      <div class="info-sismo">
+        <b>Magnitud:</b> ${mag.toFixed(1)}<br>
+        <b>Lugar:</b> ${lugar}<br>
+        <b>Profundidad:</b> ${prof?.toFixed(1) ?? "?"} km<br>
+        <b>Hora:</b> ${tiempo}
+        ${esTsunami ? `<br><span style="color:#00c2ff">🌊 Alerta de tsunami activada (NOAA/PTWC)</span>` : ""}
+      </div>
+    `);
+    circulo.addTo(capaSismos);
+
+    // Si activo alerta de tsunami, agregamos ademas un icono de ola
+    // flotando sobre el punto para que resalte de un vistazo en el mapa.
+    if (esTsunami) {
+      L.marker([lat, lon], {
+        icon: L.divIcon({
+          className: "",
+          html: `<div class="icono-tsunami">🌊</div>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 28],
+        }),
+        interactive: false,
+      }).addTo(capaSismos);
+    }
+  });
+
+  // Repintar la capa de paises con las nuevas estadisticas
+  if (capaPaises) {
+    capaPaises.eachLayer(layer => capaPaises.resetStyle(layer));
+    capaPaises.setStyle(estiloPais);
+  }
+
+  console.log(`SIPIA: ${data.features.length} sismos clasificados por pais`);
+}
+
+// Guarda la ultima lista de sismos ya procesada, para poder exportarla
+// junto con el resumen por pais.
+let ultimosSismosDetallados = [];
+
+function csvEscapar(valor) {
+  const str = String(valor ?? "");
+  if (/[",\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
+  return str;
+}
+
+function descargarCSV(nombreArchivo, filas) {
+  const contenido = filas.map(fila => fila.map(csvEscapar).join(",")).join("\r\n");
+  // BOM para que Excel reconozca UTF-8 (tildes, enies) correctamente.
+  const blob = new Blob(["\uFEFF" + contenido], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombreArchivo;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportarCSV() {
+  const btn = document.getElementById("btnExportarCSV");
+  if (!geojsonPaises) return;
+
+  const marca = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+
+  // 1) Resumen por pais
+  const filasPaises = [["Pais", "Sismos detectados", "Magnitud maxima", "Alertas de tsunami", "Nivel"]];
+  geojsonPaises.features
+    .map(f => ({ nombre: f.properties.name || f.properties.NAME || "Pais", stats: f.properties._sipia }))
+    .filter(f => f.stats && f.stats.count > 0)
+    .sort((a, b) => b.stats.maxMag - a.stats.maxMag)
+    .forEach(f => {
+      filasPaises.push([
+        f.nombre,
+        f.stats.count,
+        f.stats.maxMag.toFixed(1),
+        f.stats.tsunamis,
+        f.stats.maxMag >= UMBRAL_GRAVE ? "Grave" : "Moderado/Leve",
+      ]);
+    });
+
+  // 2) Detalle de cada sismo individual
+  const filasSismos = [["Magnitud", "Lugar", "Latitud", "Longitud", "Profundidad (km)", "Hora", "Alerta tsunami"]];
+  ultimosSismosDetallados.forEach(s => {
+    filasSismos.push([
+      s.mag.toFixed(1), s.lugar, s.lat, s.lon, s.prof ?? "", s.hora, s.tsunami ? "Si" : "No",
+    ]);
+  });
+
+  if (btn) { btn.disabled = true; btn.textContent = "⬇️ Exportando..."; }
+  try {
+    descargarCSV(`sipia_sismos_por_pais_${marca}.csv`, filasPaises);
+    descargarCSV(`sipia_sismos_detalle_${marca}.csv`, filasSismos);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "⬇️ Exportar CSV"; }
+  }
+}
+
+async function marcarSensorVIB01() {
+  try {
+    const res = await fetch(`${API_BASE}/lecturas?sensor_id=VIB-01&limite=1`);
+    const lecturas = await res.json();
+    if (lecturas.length === 0) return;
+    console.log("SIPIA VIB-01 ultima lectura:", lecturas[0]);
+  } catch (err) {
+    // La API local puede no estar corriendo; no es critico para el mapa.
+  }
+}
+
+async function iniciar() {
+  await cargarPaises();
+  await cargarYClasificarSismos();
+
+  capaPaises = L.geoJSON(geojsonPaises, {
+    style: estiloPais,
+    onEachFeature: popupPais,
+  }).addTo(mapa);
+
+  crearEtiquetasPaises();
+  capaEtiquetas.addTo(mapa);
+
+  document.getElementById("cargando").remove();
+
+  actualizarEnZoom();
+  mapa.on("zoomend", actualizarEnZoom);
+
+  marcarSensorVIB01();
+  setInterval(cargarYClasificarSismos, INTERVALO_MS);
+  setInterval(marcarSensorVIB01, INTERVALO_MS);
+}
+
+iniciar().catch(err => {
+  console.error("Error inicializando el mapa SIPIA:", err);
+  document.getElementById("cargando").textContent = "Error cargando datos. Revisa tu conexion a internet.";
+});
+</script>
+</body>
+</html>
