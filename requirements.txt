@@ -1,0 +1,38 @@
+# SIPIA --- dependencias del proyecto
+# Requiere Python >= 3.10
+#
+# Los rangos usan "minimo compatible" y un techo en la version MAYOR
+# siguiente, para evitar que una actualizacion con cambios incompatibles
+# (ej. python-telegram-bot 21 -> 22) rompa el proyecto sin aviso.
+# Para regenerar versiones exactas y reproducibles: pip freeze > requirements.lock.txt
+
+# --- API / servidor web ------------------------------------------------
+fastapi>=0.110,<1.0
+uvicorn[standard]>=0.29,<1.0
+
+# NOTA: fastapi y flask estan ambos listados. Si el proyecto corre un solo
+# servidor (industrial_platform.py con FastAPI/uvicorn en :8000), y Flask
+# solo era una opcion de despliegue alternativa que ya no se usa, se puede
+# quitar la linea de flask para reducir dependencias.
+flask>=3.0,<4.0
+
+# --- Cliente HTTP --------------------------------------------------------
+requests>=2.31,<3.0
+
+# --- Generacion de reportes PDF y graficas -------------------------------
+reportlab>=4.4,<5.0
+matplotlib>=3.10,<4.0
+
+# --- Bot de Telegram -------------------------------------------------------
+python-telegram-bot>=21.0,<23.0
+
+# --- Texto a voz (alertas por audio) --------------------------------------
+pyttsx3>=2.90,<3.0
+
+# --- Comunicacion serial con sensores fisicos ------------------------------
+pyserial>=3.5,<4.0
+
+# --- Opcional: respaldo de reproduccion de audio WAV en Linux/Mac ----------
+# En Windows no hace falta: el sistema usa winsound (incluido en Python).
+# Si lo necesitas, instalalo aparte una vez tengas todo lo demas:
+#   pip install pygame
