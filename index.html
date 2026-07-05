@@ -6,397 +6,563 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root {
-    --bg: #0a0f16; --panel: #131c27; --panel-2: #0e1621; --border: #22303f;
-    --text: #e6edf3; --muted: #7c8b99;
-    --green: #2ecc71; --yellow: #f1c40f; --red: #e74c3c; --blue: #3ea6ff; --amber: #ffb547;
-    --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
-    --sans: "Segoe UI", Arial, sans-serif;
+    --bg: #0a0f1c;
+    --bg-grad-1: #0a0f1c;
+    --bg-grad-2: #10182b;
+    --panel: #131c30;
+    --panel-2: #182338;
+    --border: #22304a;
+    --text: #eef2fa;
+    --muted: #8b98b8;
+    --green: #2ecc71;
+    --yellow: #f5c542;
+    --red: #ef4444;
+    --blue: #4f9dff;
+    --purple: #a78bfa;
+    --cyan: #22d3ee;
+    --shadow: 0 8px 24px rgba(0,0,0,.35);
   }
   * { box-sizing: border-box; }
-  ::selection { background: rgba(62,166,255,.3); }
   body {
-    margin: 0; background:
-      radial-gradient(1200px 400px at 50% -10%, rgba(62,166,255,.06), transparent),
-      var(--bg);
-    color: var(--text); font-family: var(--sans);
-  }
-  button:focus-visible, input:focus-visible, select:focus-visible {
-    outline: 2px solid var(--blue); outline-offset: 2px;
+    margin: 0;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(79,157,255,.10), transparent 40%),
+      radial-gradient(circle at 85% 10%, rgba(167,139,250,.08), transparent 40%),
+      linear-gradient(180deg, var(--bg-grad-1), var(--bg-grad-2));
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    min-height: 100vh;
   }
 
+  /* ---------- Header ---------- */
   header {
-    position: sticky; top: 0; z-index: 10;
-    padding: 16px 24px; border-bottom: 1px solid var(--border);
+    padding: 18px 26px;
     display: flex; align-items: center; justify-content: space-between;
-    background: rgba(10,15,22,.85); backdrop-filter: blur(8px);
+    flex-wrap: wrap; gap: 12px;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(6px);
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(10,15,28,.85);
   }
-  header h1 {
-    margin: 0; font-size: 18px; font-weight: 700; letter-spacing: .02em;
-    display: flex; align-items: center; gap: 10px;
+  .titulo { display: flex; align-items: center; gap: 12px; }
+  .titulo .icono {
+    width: 40px; height: 40px; border-radius: 12px; display:flex; align-items:center; justify-content:center;
+    background: linear-gradient(135deg, var(--blue), var(--purple));
+    font-size: 20px; box-shadow: var(--shadow);
   }
-  header h1 .tag { font-family: var(--mono); font-size: 11px; color: var(--muted); font-weight: 400; border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; }
-  .estado-wrap { display: flex; align-items: center; gap: 16px; }
-  .estado { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
-  .estado .hora { font-family: var(--mono); font-size: 11px; }
-  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
-  .dot.conectado { background: var(--green); box-shadow: 0 0 0 3px rgba(46,204,113,.15); }
-  .dot.desconectado { background: var(--red); box-shadow: 0 0 0 3px rgba(231,76,60,.15); animation: pulse 1.4s infinite; }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
-  @media (prefers-reduced-motion: reduce) { .dot.desconectado { animation: none; } }
+  .titulo h1 { margin: 0; font-size: 19px; font-weight: 700; }
+  .titulo p { margin: 0; font-size: 12px; color: var(--muted); }
 
-  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 12px; padding: 20px 24px 0; }
+  .cabecera-derecha { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .reloj { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .estado-pill {
+    display: flex; align-items: center; gap: 8px; font-size: 13px;
+    padding: 6px 14px; border-radius: 999px; background: var(--panel); border: 1px solid var(--border);
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+  .dot.conectado { background: var(--green); box-shadow: 0 0 10px var(--green); animation: pulso 2s infinite; }
+  .dot.desconectado { background: var(--red); box-shadow: 0 0 10px var(--red); }
+  @keyframes pulso { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+  a.link-mapa {
+    display:flex; align-items:center; gap:6px; font-size: 13px; text-decoration:none;
+    color: #fff; background: linear-gradient(135deg, var(--cyan), var(--blue));
+    padding: 8px 14px; border-radius: 10px; font-weight: 600; box-shadow: var(--shadow);
+    transition: transform .15s ease;
+  }
+  a.link-mapa:hover { transform: translateY(-1px); }
+
+  /* ---------- KPIs ---------- */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px,1fr)); gap: 14px; padding: 22px 26px 0; }
   .kpi {
-    background: linear-gradient(180deg, var(--panel), var(--panel-2));
-    border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px;
-    transition: border-color .2s;
+    background: linear-gradient(160deg, var(--panel), var(--panel-2));
+    border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px;
+    box-shadow: var(--shadow); position: relative; overflow: hidden;
   }
-  .kpi .top { display: flex; justify-content: space-between; align-items: flex-start; }
-  .kpi .valor { font-size: 26px; font-weight: 700; font-family: var(--mono); font-variant-numeric: tabular-nums; }
-  .kpi .icon { font-size: 15px; opacity: .5; }
-  .kpi .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }
-  .kpi.alerta { border-color: rgba(231,76,60,.4); }
+  .kpi::after {
+    content:""; position:absolute; inset:0; opacity:.06; pointer-events:none;
+    background: radial-gradient(circle at 100% 0%, var(--kpi-color, var(--blue)), transparent 60%);
+  }
+  .kpi .valor { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+  .kpi .label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }
+  .kpi.acc-blue   { --kpi-color: var(--blue); }
+  .kpi.acc-red    { --kpi-color: var(--red); }
+  .kpi.acc-yellow { --kpi-color: var(--yellow); }
+  .kpi.acc-purple { --kpi-color: var(--purple); }
+  .kpi.acc-green  { --kpi-color: var(--green); }
 
-  .grid-sensores { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px,1fr)); gap: 16px; padding: 20px 24px; }
-  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
-  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .card-header h3 { margin: 0; font-size: 13px; color: var(--text); font-weight: 600; letter-spacing: .04em; font-family: var(--mono); }
-  .card-header .ultimo { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-  .badge { font-size: 10px; padding: 3px 8px; border-radius: 999px; font-weight: 700; letter-spacing: .03em; }
-  .badge.verde { background: rgba(46,204,113,.15); color: var(--green); }
-  .badge.amarillo { background: rgba(241,196,15,.15); color: var(--yellow); }
-  .badge.rojo { background: rgba(231,76,60,.15); color: var(--red); }
-  canvas { width: 100% !important; height: 150px !important; }
-  .card-empty { height: 150px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12px; font-family: var(--mono); }
+  /* ---------- Controles ---------- */
+  .controles {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    padding: 18px 26px;
+  }
+  button {
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+    padding: 9px 15px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600;
+    display: flex; align-items: center; gap: 6px; transition: all .15s ease;
+  }
+  button:hover { border-color: var(--blue); transform: translateY(-1px); }
+  button.primario { background: linear-gradient(135deg, var(--blue), #3a7fd6); border: none; color: #fff; }
+  button.silenciado { background: linear-gradient(135deg, var(--red), #b53434); border: none; color: #fff; }
+  button.chico { padding: 7px 11px; font-size: 12px; }
+  .separador-v { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+  .grupo-volumen { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12.5px; }
+  input[type=range] { width: 130px; accent-color: var(--blue); }
 
-  .panel-eventos { margin: 0 24px 24px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
-  .panel-eventos-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
-  .panel-eventos h3 { margin: 0; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-  select.filtro { background: var(--panel-2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 5px 8px; font-size: 12px; font-family: var(--mono); }
-  .tabla-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: var(--mono); }
-  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  /* ---------- Grid principal: sensores + panel lateral ---------- */
+  .layout { display: grid; grid-template-columns: 1fr 300px; gap: 16px; padding: 0 26px 22px; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+  .grid-sensores { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 14px; }
+  .card {
+    background: linear-gradient(160deg, var(--panel), var(--panel-2));
+    border: 1px solid var(--border); border-left: 3px solid var(--sev-color, var(--border));
+    border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow);
+    transition: border-color .3s ease;
+  }
+  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .card-header .nombre { display:flex; align-items:center; gap:8px; font-size: 13.5px; font-weight: 700; letter-spacing: .02em; }
+  .card-header .nombre .icono-sensor { font-size: 16px; }
+  .badge { font-size: 10.5px; padding: 3px 9px; border-radius: 999px; font-weight: 800; letter-spacing: .03em; }
+  .badge.verde    { background: rgba(46,204,113,.15); color: var(--green); }
+  .badge.amarillo { background: rgba(245,197,66,.15); color: var(--yellow); }
+  .badge.rojo     { background: rgba(239,68,68,.18); color: var(--red); }
+
+  .valor-actual { display: flex; align-items: baseline; gap: 8px; margin: 2px 0 8px; }
+  .valor-actual .num { font-size: 24px; font-weight: 800; }
+  .valor-actual .unidad { font-size: 12px; color: var(--muted); }
+  .valor-actual .tendencia { font-size: 12px; font-weight: 700; margin-left: auto; }
+  .tendencia.subiendo { color: var(--red); }
+  .tendencia.bajando { color: var(--cyan); }
+  .tendencia.estable { color: var(--muted); }
+
+  canvas.chart-sensor { width: 100% !important; height: 90px !important; }
+
+  .mini-stats { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 8px; }
+  .mini-stats b { color: var(--text); }
+
+  /* ---------- Panel lateral ---------- */
+  .panel-lateral { display: flex; flex-direction: column; gap: 14px; }
+  .box {
+    background: linear-gradient(160deg, var(--panel), var(--panel-2));
+    border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: var(--shadow);
+  }
+  .box h3 { margin: 0 0 10px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  canvas#chartSeveridad { max-height: 160px; }
+  .leyenda-sev { display: flex; justify-content: center; gap: 12px; margin-top: 8px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+  .leyenda-sev span { display: flex; align-items: center; gap: 5px; }
+  .punto-leyenda { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  .mapa-mini {
+    display: block; text-decoration: none; color: var(--text);
+    border-radius: 10px; overflow: hidden; position: relative;
+    height: 130px;
+    background: linear-gradient(135deg, #14304d, #0c1c30);
+    display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 6px;
+    border: 1px solid var(--border); transition: transform .15s ease;
+  }
+  .mapa-mini:hover { transform: scale(1.02); }
+  .mapa-mini .emoji { font-size: 30px; }
+  .mapa-mini .txt { font-size: 12.5px; font-weight: 700; }
+  .mapa-mini .sub { font-size: 11px; color: var(--muted); }
+
+  .pruebas-sonido { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* ---------- Tabla de eventos ---------- */
+  .panel-eventos { margin: 0 26px 26px; background: linear-gradient(160deg, var(--panel), var(--panel-2)); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); }
+  .panel-eventos-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .panel-eventos-header h3 { margin: 0; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .filtros-tabla { display: flex; gap: 8px; align-items: center; }
+  select, .buscador {
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+    padding: 7px 10px; border-radius: 8px; font-size: 12.5px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 12.8px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
   tbody tr:hover { background: rgba(255,255,255,.02); }
   .sev-CRITICAL { color: var(--red); font-weight: 700; }
   .sev-WARNING { color: var(--yellow); font-weight: 700; }
-  .fila-vacia td { text-align: center; color: var(--muted); padding: 20px; }
+  .sev-OK, .sev- { color: var(--muted); }
 
-  .controles { display: flex; gap: 10px; align-items: center; padding: 0 24px 20px; flex-wrap: wrap; }
-  button {
-    background: var(--blue); border: none; color: #04121f; font-weight: 600; padding: 8px 14px;
-    border-radius: 8px; cursor: pointer; font-size: 13px; transition: filter .15s, transform .1s;
+  /* ---------- Toasts ---------- */
+  #toasts { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 999; }
+  .toast {
+    background: var(--panel); border: 1px solid var(--border); border-left: 4px solid var(--red);
+    padding: 12px 16px; border-radius: 10px; box-shadow: var(--shadow); min-width: 260px;
+    animation: entrar .25s ease;
+    font-size: 13px;
   }
-  button:hover { filter: brightness(1.1); }
-  button:active { transform: translateY(1px); }
-  button.secundario { background: var(--panel); border: 1px solid var(--border); color: var(--text); font-weight: 500; }
-  button.pausado { background: var(--amber); }
-  .vol-wrap { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-  .vol-wrap label { color: var(--muted); font-size: 12px; }
-  input[type=range] { width: 130px; accent-color: var(--blue); }
+  .toast b { display: block; margin-bottom: 2px; }
+  @keyframes entrar { from { opacity:0; transform: translateX(20px); } to { opacity:1; transform: translateX(0); } }
 
-  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-
-  .panel-paises-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
-  .panel-paises-header .sub { font-size: 11px; color: var(--muted); font-family: var(--mono); }
-  .fila-grave td { color: var(--red); }
-  .fila-moderada td { color: var(--yellow); }
-  .fila-tsunami { box-shadow: inset 3px 0 0 0 #00c2ff; }
-  .cargando-paises td { text-align: center; color: var(--muted); padding: 20px; font-family: var(--mono); }
+  footer { text-align: center; color: var(--muted); font-size: 11.5px; padding: 10px 0 26px; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>🌍 SIPIA <span class="tag">monitoreo sísmico</span></h1>
-  <div class="estado-wrap">
-    <span class="hora" id="horaActualizacion">--:--:--</span>
-    <div class="estado" role="status" aria-live="polite">
-      <span class="dot" id="dotEstado"></span>
-      <span id="textoEstado">Conectando…</span>
+  <div class="titulo">
+    <div class="icono">🌍</div>
+    <div>
+      <h1>SIPIA — Dashboard</h1>
+      <p>Sistema de Monitoreo Sísmico Inteligente</p>
     </div>
+  </div>
+  <div class="cabecera-derecha">
+    <span class="reloj" id="reloj">--:--:--</span>
+    <div class="estado-pill">
+      <span class="dot" id="dotEstado"></span>
+      <span id="textoEstado">Conectando...</span>
+    </div>
+    <a class="link-mapa" href="mapa_sismos.html" target="_blank">🗺️ Ver mapa mundial</a>
   </div>
 </header>
 
-<div class="kpis" id="kpiGrid">
-  <div class="kpi"><div class="top"><div class="label">Lecturas</div><span class="icon">📈</span></div><div class="valor" id="kpiLecturas">0</div></div>
-  <div class="kpi"><div class="top"><div class="label">Anomalías hoy</div><span class="icon">⚠️</span></div><div class="valor" id="kpiAnomalias">0</div></div>
-  <div class="kpi"><div class="top"><div class="label">Lecturas VIB-01</div><span class="icon">📳</span></div><div class="valor" id="kpiSismos">0</div></div>
-  <div class="kpi"><div class="top"><div class="label">Sensores activos</div><span class="icon">🛰️</span></div><div class="valor" id="kpiSensores">0</div></div>
+<div class="kpis">
+  <div class="kpi acc-blue"><div class="valor" id="kpiLecturas">0</div><div class="label">Lecturas</div></div>
+  <div class="kpi acc-red"><div class="valor" id="kpiAnomalias">0</div><div class="label">Anomalías hoy</div></div>
+  <div class="kpi acc-yellow"><div class="valor" id="kpiSismos">0</div><div class="label">Sismos VIB-01</div></div>
+  <div class="kpi acc-purple"><div class="valor" id="kpiSensores">0</div><div class="label">Sensores activos</div></div>
+  <div class="kpi acc-green"><div class="valor" id="kpiUltima">--</div><div class="label">Última actualización</div></div>
 </div>
 
 <div class="controles">
-  <button onclick="exportarPDF()">📄 Exportar PDF</button>
-  <button class="secundario" onclick="toggleSilencio()" id="btnSilenciar" aria-pressed="false">🔊 Silenciar</button>
-  <button class="secundario" onclick="togglePausa()" id="btnPausa" aria-pressed="false">⏸ Pausar</button>
-  <div class="vol-wrap">
-    <label for="sliderVolumen">Volumen</label>
+  <button class="primario" onclick="exportarPDF()">📄 Exportar PDF</button>
+  <button onclick="exportarCSV()">📊 Exportar CSV</button>
+  <div class="separador-v"></div>
+  <button id="btnSilenciar" onclick="toggleSilencio()">🔊 Silenciar</button>
+  <div class="grupo-volumen">
+    Volumen
     <input type="range" id="sliderVolumen" min="0" max="100" value="80" onchange="ajustarVolumen(this.value)">
+  </div>
+  <div class="separador-v"></div>
+  <div class="pruebas-sonido">
+    <button class="chico" onclick="probarAlerta('ok')">🟢 Probar OK</button>
+    <button class="chico" onclick="probarAlerta('advertencia')">🟡 Probar Advertencia</button>
+    <button class="chico" onclick="probarAlerta('critico')">🔴 Probar Crítico</button>
   </div>
 </div>
 
-<div class="grid-sensores" id="gridSensores">
-  <!-- Las tarjetas de graficas se generan por JS -->
+<div class="layout">
+  <div class="grid-sensores" id="gridSensores">
+    <!-- Las tarjetas de sensores se generan por JS -->
+  </div>
+
+  <div class="panel-lateral">
+    <div class="box">
+      <h3>Distribución de severidad</h3>
+      <canvas id="chartSeveridad"></canvas>
+      <div class="leyenda-sev">
+        <span><i class="punto-leyenda" style="background:#ef4444"></i> Crítico</span>
+        <span><i class="punto-leyenda" style="background:#f5c542"></i> Advertencia</span>
+        <span><i class="punto-leyenda" style="background:#2ecc71"></i> OK</span>
+      </div>
+    </div>
+
+    <div class="box">
+      <h3>Mapa mundial de sismos</h3>
+      <a class="mapa-mini" href="mapa_sismos.html" target="_blank">
+        <div class="emoji">🌐</div>
+        <div class="txt">Abrir mapa interactivo</div>
+        <div class="sub">Datos en vivo — USGS</div>
+      </a>
+    </div>
+  </div>
 </div>
 
 <div class="panel-eventos">
   <div class="panel-eventos-header">
-    <h3>Historial de últimas lecturas / eventos</h3>
-    <select class="filtro" id="filtroSensor" onchange="renderTabla()" aria-label="Filtrar por sensor">
-      <option value="">Todos los sensores</option>
-    </select>
+    <h3>Historial de lecturas / eventos</h3>
+    <div class="filtros-tabla">
+      <input class="buscador" id="buscadorTabla" placeholder="Buscar sensor..." oninput="renderTabla()">
+      <select id="filtroSeveridad" onchange="renderTabla()">
+        <option value="">Todas las severidades</option>
+        <option value="CRITICAL">Solo críticas</option>
+        <option value="WARNING">Solo advertencias</option>
+      </select>
+    </div>
   </div>
-  <div class="tabla-wrap">
-    <table>
-      <thead><tr><th>Sensor</th><th>Valor</th><th>Unidad</th><th>Severidad</th><th>Hora</th></tr></thead>
-      <tbody id="tablaEventos"><tr class="fila-vacia"><td colspan="5">Esperando datos…</td></tr></tbody>
-    </table>
-  </div>
+  <table>
+    <thead><tr><th>Sensor</th><th>Valor</th><th>Unidad</th><th>Severidad</th><th>Hora</th></tr></thead>
+    <tbody id="tablaEventos"></tbody>
+  </table>
 </div>
 
-<div class="panel-eventos">
-  <div class="panel-paises-header">
-    <h3>🌎 Países con actividad sísmica ahora (USGS, últimas 24h)</h3>
-    <span class="sub" id="horaActualizacionPaises">Cargando…</span>
-  </div>
-  <div class="tabla-wrap">
-    <table>
-      <thead><tr><th>País</th><th>Sismos</th><th>Magnitud máx.</th><th>Tsunami</th><th>Nivel</th></tr></thead>
-      <tbody id="tablaPaises"><tr class="cargando-paises"><td colspan="5">Cargando datos de países (USGS)…</td></tr></tbody>
-    </table>
-  </div>
-  <div style="margin-top:10px;">
-    <a href="mapa.html" style="color:#3ea6ff; font-size:12px; text-decoration:none;">🗺️ Ver en el mapa mundial &rarr;</a>
-  </div>
-</div>
+<footer>SIPIA v1.0 — UAGRM Bolivia · API: <code id="apiUrlFooter"></code></footer>
+<div id="toasts"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
 <script>
 /* ============================================================
-   SIPIA Dashboard --- HTML + JavaScript puro (sin dependencias
-   externas mas alla de Chart.js via CDN para las graficas).
+   SIPIA Dashboard v2 --- HTML + JavaScript puro (Chart.js via CDN)
    Consume la API REST expuesta por industrial_platform.py
    ============================================================ */
 
-const API_BASE = "https://sipia-sistema.onrender.com";
-const SENSORES = ["VIB-01", "ACCEL", "GYRO", "TEMP", "PRESS"];
+const API_BASE = "http://127.0.0.1:8000";
+const SENSORES = [
+  { id: "VIB-01", nombre: "Vibración sísmica", icono: "🌋" },
+  { id: "ACCEL",  nombre: "Acelerómetro",       icono: "📈" },
+  { id: "GYRO",   nombre: "Giroscopio",         icono: "🌀" },
+  { id: "TEMP",   nombre: "Temperatura",        icono: "🌡️" },
+  { id: "PRESS",  nombre: "Presión",            icono: "🌬️" },
+];
 const MAX_PUNTOS = 30;
 const INTERVALO_MS = 3000;
-const MAX_REINTENTO_MS = 30000;
-const COLORES = {
-  "VIB-01": "#e74c3c", "ACCEL": "#3ea6ff", "GYRO": "#2ecc71",
-  "TEMP": "#ffb547", "PRESS": "#a385ff",
-};
+const COLOR_POR_SENSOR = { "VIB-01": "#ef4444", "ACCEL": "#4f9dff", "GYRO": "#a78bfa", "TEMP": "#f5c542", "PRESS": "#22d3ee" };
+
+document.getElementById("apiUrlFooter").textContent = API_BASE;
 
 const charts = {};
-let pausado = false;
-let intervaloId = null;
-let reintentoActual = INTERVALO_MS;
-let ultimosEventosVistos = new Set();
 let ultimasLecturas = [];
-let ultimoSevPorSensor = {};
+let ultimosEventos = [];
+let idsEventosNotificados = new Set();
+let chartSeveridad = null;
 
-function escapar(str) {
-  const d = document.createElement("div");
-  d.textContent = str ?? "";
-  return d.innerHTML;
+/* ---------- Reloj ---------- */
+function tickReloj() {
+  document.getElementById("reloj").textContent = new Date().toLocaleTimeString();
 }
+setInterval(tickReloj, 1000);
+tickReloj();
 
-function crearTarjetaSensor(sensorId) {
+/* ---------- Tarjetas de sensores ---------- */
+function crearTarjetaSensor(sensor) {
   const grid = document.getElementById("gridSensores");
   const card = document.createElement("div");
   card.className = "card";
+  card.id = `card-${sensor.id}`;
   card.innerHTML = `
     <div class="card-header">
-      <h3>${escapar(sensorId)}</h3>
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span class="ultimo" id="ultimo-${sensorId}"></span>
-        <span class="badge verde" id="badge-${sensorId}">OK</span>
-      </div>
+      <span class="nombre"><span class="icono-sensor">${sensor.icono}</span>${sensor.nombre}</span>
+      <span class="badge verde" id="badge-${sensor.id}">OK</span>
     </div>
-    <canvas id="chart-${sensorId}" role="img" aria-label="Gráfica de lecturas de ${escapar(sensorId)}"></canvas>
+    <div class="valor-actual">
+      <span class="num" id="valor-${sensor.id}">—</span>
+      <span class="unidad" id="unidad-${sensor.id}"></span>
+      <span class="tendencia estable" id="tendencia-${sensor.id}">—</span>
+    </div>
+    <canvas class="chart-sensor" id="chart-${sensor.id}"></canvas>
+    <div class="mini-stats">
+      <span>Mín: <b id="min-${sensor.id}">—</b></span>
+      <span>Prom: <b id="avg-${sensor.id}">—</b></span>
+      <span>Máx: <b id="max-${sensor.id}">—</b></span>
+    </div>
   `;
   grid.appendChild(card);
 
-  const color = COLORES[sensorId] || "#3ea6ff";
-  const ctx = document.getElementById(`chart-${sensorId}`).getContext("2d");
-  charts[sensorId] = new Chart(ctx, {
+  const color = COLOR_POR_SENSOR[sensor.id] || "#4f9dff";
+  const ctx = document.getElementById(`chart-${sensor.id}`).getContext("2d");
+  charts[sensor.id] = new Chart(ctx, {
     type: "line",
     data: { labels: [], datasets: [{
       data: [], borderColor: color, backgroundColor: color + "22",
-      tension: .3, pointRadius: 0, borderWidth: 2, fill: true,
+      tension: .35, pointRadius: 0, fill: true, borderWidth: 2,
     }]},
     options: {
       animation: false, responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: { legend: { display: false }, tooltip: { enabled: true } },
       scales: {
         x: { display: false },
-        y: { grid: { color: "#22303f" }, ticks: { color: "#7c8b99", font: { size: 10 }, maxTicksLimit: 4 } },
+        y: { display: false },
       },
     },
   });
+}
 
-  const filtro = document.getElementById("filtroSensor");
-  const opt = document.createElement("option");
-  opt.value = sensorId; opt.textContent = sensorId;
-  filtro.appendChild(opt);
+function crearChartSeveridad() {
+  const ctx = document.getElementById("chartSeveridad").getContext("2d");
+  chartSeveridad = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Crítico", "Advertencia", "OK"],
+      datasets: [{ data: [0, 0, 1], backgroundColor: ["#ef4444", "#f5c542", "#2ecc71"], borderWidth: 0 }],
+    },
+    options: {
+      animation: false, responsive: true,
+      plugins: { legend: { display: false } },
+      cutout: "65%",
+    },
+  });
 }
 
 function actualizarBadge(sensorId, severidad) {
   const badge = document.getElementById(`badge-${sensorId}`);
+  const card = document.getElementById(`card-${sensorId}`);
   if (!badge) return;
-  badge.className = "badge " + (severidad === "CRITICAL" ? "rojo" : severidad === "WARNING" ? "amarillo" : "verde");
+  const clase = severidad === "CRITICAL" ? "rojo" : severidad === "WARNING" ? "amarillo" : "verde";
+  const color = severidad === "CRITICAL" ? "var(--red)" : severidad === "WARNING" ? "var(--yellow)" : "var(--border)";
+  badge.className = "badge " + clase;
   badge.textContent = severidad === "CRITICAL" ? "CRÍTICO" : severidad === "WARNING" ? "ADVERTENCIA" : "OK";
+  if (card) card.style.setProperty("--sev-color", color);
 }
 
-async function fetchJSON(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`);
-  return res.json();
+function actualizarTendencia(sensorId, serie) {
+  const el = document.getElementById(`tendencia-${sensorId}`);
+  if (!el || serie.length < 2) return;
+  const delta = serie[serie.length - 1] - serie[serie.length - 2];
+  if (Math.abs(delta) < 0.001) {
+    el.textContent = "→ estable"; el.className = "tendencia estable";
+  } else if (delta > 0) {
+    el.textContent = "↑ subiendo"; el.className = "tendencia subiendo";
+  } else {
+    el.textContent = "↓ bajando"; el.className = "tendencia bajando";
+  }
 }
 
+/* ---------- Toasts para alertas nuevas ---------- */
+function mostrarToast(evento) {
+  const cont = document.getElementById("toasts");
+  const div = document.createElement("div");
+  div.className = "toast";
+  div.style.borderLeftColor = evento.severity === "CRITICAL" ? "var(--red)" : "var(--yellow)";
+  div.innerHTML = `<b>${evento.severity === "CRITICAL" ? "🔴 Alerta crítica" : "🟡 Advertencia"} — ${evento.sensor_id}</b>${evento.reason || ""}`;
+  cont.appendChild(div);
+  setTimeout(() => div.remove(), 8000);
+}
+
+/* ---------- Actualizacion principal ---------- */
 async function actualizarDashboard() {
-  if (pausado) return;
   try {
-    const [estado, lecturas, eventos] = await Promise.all([
-      fetchJSON(`${API_BASE}/estado`),
-      fetchJSON(`${API_BASE}/lecturas?limite=100`),
-      fetchJSON(`${API_BASE}/eventos?limite=20`),
+    const [estadoRes, lecturasRes, eventosRes] = await Promise.all([
+      fetch(`${API_BASE}/estado`),
+      fetch(`${API_BASE}/lecturas?limite=150`),
+      fetch(`${API_BASE}/eventos?limite=30`),
     ]);
+    const estado = await estadoRes.json();
+    const lecturas = await lecturasRes.json();
+    const eventos = await eventosRes.json();
 
     setConectado(true);
-    reintentoActual = INTERVALO_MS;
     ultimasLecturas = lecturas;
-
-    const sensoresActivos = estado.sensores_activos || [];
-    const kpiSensores = document.getElementById("kpiSensores");
-    kpiSensores.textContent = sensoresActivos.length;
+    ultimosEventos = eventos;
 
     document.getElementById("kpiLecturas").textContent = estado.lecturas ?? 0;
     document.getElementById("kpiAnomalias").textContent = estado.eventos ?? 0;
+    document.getElementById("kpiSensores").textContent = (estado.sensores_activos || []).length;
     document.getElementById("kpiSismos").textContent =
       lecturas.filter(l => l.sensor_id === "VIB-01").length;
-    document.getElementById("kpiAnomalias").closest(".kpi").classList.toggle("alerta", (estado.eventos ?? 0) > 0);
+    document.getElementById("kpiUltima").textContent = new Date().toLocaleTimeString();
 
-    // Actualizar graficas por sensor (usa las ultimas N lecturas de cada uno)
-    SENSORES.forEach(sensorId => {
-      const propias = lecturas.filter(l => l.sensor_id === sensorId).slice(0, MAX_PUNTOS).reverse();
-      if (!charts[sensorId]) return;
+    // Graficas + stats por sensor
+    SENSORES.forEach(sensor => {
+      const propias = lecturas.filter(l => l.sensor_id === sensor.id).slice(0, MAX_PUNTOS).reverse();
       if (propias.length === 0) return;
-      charts[sensorId].data.labels = propias.map(l => (l.timestamp || "").slice(11, 19));
-      charts[sensorId].data.datasets[0].data = propias.map(l => l.value);
-      charts[sensorId].update();
+
+      const valores = propias.map(l => l.value);
+      charts[sensor.id].data.labels = propias.map(l => l.timestamp.slice(11, 19));
+      charts[sensor.id].data.datasets[0].data = valores;
+      charts[sensor.id].update();
+
       const ultima = propias[propias.length - 1];
-      const elUltimo = document.getElementById(`ultimo-${sensorId}`);
-      if (elUltimo && ultima) elUltimo.textContent = `${Number(ultima.value).toFixed(2)} ${ultima.unit ?? ""}`;
+      document.getElementById(`valor-${sensor.id}`).textContent = ultima.value.toFixed(2);
+      document.getElementById(`unidad-${sensor.id}`).textContent = ultima.unit;
+      document.getElementById(`min-${sensor.id}`).textContent = Math.min(...valores).toFixed(1);
+      document.getElementById(`max-${sensor.id}`).textContent = Math.max(...valores).toFixed(1);
+      document.getElementById(`avg-${sensor.id}`).textContent = (valores.reduce((a,b)=>a+b,0)/valores.length).toFixed(1);
+      actualizarTendencia(sensor.id, valores);
     });
 
-    // Marcar severidad segun eventos recientes por sensor (el mas reciente por sensor)
+    // Severidad por sensor + distribucion global
     const sevPorSensor = {};
-    eventos.forEach(e => { if (!sevPorSensor[e.sensor_id]) sevPorSensor[e.sensor_id] = e.severity; });
-    ultimoSevPorSensor = sevPorSensor;
-    SENSORES.forEach(s => actualizarBadge(s, sevPorSensor[s] || "OK"));
-
-    // Sonar alerta ante eventos criticos nuevos
+    let nCritico = 0, nAdvertencia = 0;
     eventos.forEach(e => {
-      const id = `${e.sensor_id}-${e.timestamp}-${e.severity}`;
-      if (!ultimosEventosVistos.has(id)) {
-        ultimosEventosVistos.add(id);
-        if (e.severity === "CRITICAL") beep(880, .25);
-        else if (e.severity === "WARNING") beep(440, .15);
+      if (!sevPorSensor[e.sensor_id]) sevPorSensor[e.sensor_id] = e.severity;
+      if (e.severity === "CRITICAL") nCritico++;
+      else if (e.severity === "WARNING") nAdvertencia++;
+    });
+    SENSORES.forEach(s => actualizarBadge(s.id, sevPorSensor[s.id] || "OK"));
+
+    const nOk = Math.max(0, SENSORES.length - nCritico - nAdvertencia);
+    if (chartSeveridad) {
+      chartSeveridad.data.datasets[0].data = [nCritico, nAdvertencia, nOk || 1];
+      chartSeveridad.update();
+    }
+
+    // Notificaciones toast para eventos nuevos (criticos y advertencias)
+    eventos.forEach(e => {
+      if (!idsEventosNotificados.has(e.event_id)) {
+        idsEventosNotificados.add(e.event_id);
+        if (e.severity === "CRITICAL" || e.severity === "WARNING") mostrarToast(e);
       }
     });
-    if (ultimosEventosVistos.size > 500) ultimosEventosVistos = new Set(eventos.map(e => `${e.sensor_id}-${e.timestamp}-${e.severity}`));
 
     renderTabla();
-    document.getElementById("horaActualizacion").textContent = new Date().toLocaleTimeString();
 
   } catch (err) {
     console.error("Error actualizando dashboard:", err);
     setConectado(false);
-    programarReintento();
   }
 }
 
 function renderTabla() {
+  const texto = (document.getElementById("buscadorTabla").value || "").toUpperCase();
+  const filtroSev = document.getElementById("filtroSeveridad").value;
+
+  const sevPorSensor = {};
+  ultimosEventos.forEach(e => { if (!sevPorSensor[e.sensor_id]) sevPorSensor[e.sensor_id] = e.severity; });
+
+  let filas = ultimasLecturas.slice(0, 60).map((l, i) => {
+    const sev = i === 0 && sevPorSensor[l.sensor_id] ? sevPorSensor[l.sensor_id] : "";
+    return { ...l, sev };
+  });
+
+  if (texto) filas = filas.filter(f => f.sensor_id.toUpperCase().includes(texto));
+  if (filtroSev) filas = filas.filter(f => f.sev === filtroSev);
+
   const tbody = document.getElementById("tablaEventos");
-  const filtro = document.getElementById("filtroSensor").value;
-  const filas = ultimasLecturas.filter(l => !filtro || l.sensor_id === filtro).slice(0, 15);
-
-  if (filas.length === 0) {
-    tbody.innerHTML = `<tr class="fila-vacia"><td colspan="5">Sin lecturas para mostrar</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = filas.map(l => {
-    const esUltimaDelSensor = ultimasLecturas.find(x => x.sensor_id === l.sensor_id) === l;
-    const sev = esUltimaDelSensor ? (ultimoSevPorSensor[l.sensor_id] || "") : "";
-    return `<tr>
-      <td>${escapar(l.sensor_id)}</td>
-      <td>${Number(l.value).toFixed(2)}</td>
-      <td>${escapar(l.unit)}</td>
-      <td class="sev-${escapar(sev)}">${escapar(sev) || "—"}</td>
-      <td>${escapar((l.timestamp || "").slice(11, 19))}</td>
-    </tr>`;
-  }).join("");
+  tbody.innerHTML = filas.slice(0, 30).map(l => `
+    <tr>
+      <td>${l.sensor_id}</td>
+      <td>${l.value.toFixed(2)}</td>
+      <td>${l.unit}</td>
+      <td class="sev-${l.sev}">${l.sev || "-"}</td>
+      <td>${l.timestamp.slice(11,19)}</td>
+    </tr>
+  `).join("") || `<tr><td colspan="5" style="color:var(--muted); text-align:center;">Sin resultados</td></tr>`;
 }
 
 function setConectado(ok) {
   document.getElementById("dotEstado").className = "dot " + (ok ? "conectado" : "desconectado");
   document.getElementById("textoEstado").textContent = ok
-    ? "Conectado — recibiendo datos en tiempo real"
-    : "Desconectado — reintentando…";
+    ? "Conectado — tiempo real"
+    : "Desconectado — reintentando...";
 }
 
-function programarReintento() {
-  if (intervaloId) clearTimeout(intervaloId);
-  reintentoActual = Math.min(reintentoActual * 1.7, MAX_REINTENTO_MS);
-  intervaloId = setTimeout(actualizarDashboard, reintentoActual);
-}
-
-function cicloNormal() {
-  if (intervaloId) clearTimeout(intervaloId);
-  intervaloId = setTimeout(async () => {
-    await actualizarDashboard();
-    cicloNormal();
-  }, INTERVALO_MS);
-}
-
-function togglePausa() {
-  pausado = !pausado;
-  const btn = document.getElementById("btnPausa");
-  btn.textContent = pausado ? "▶ Reanudar" : "⏸ Pausar";
-  btn.classList.toggle("pausado", pausado);
-  btn.setAttribute("aria-pressed", String(pausado));
-}
-
-/* --- Alertas de audio via Web Audio API (fallback si el backend no reproduce sonido) --- */
+/* ---------- Alertas de audio via Web Audio API (fallback visual) ---------- */
 let silenciado = false;
 let volumen = 0.8;
-let audioCtx = null;
-function obtenerAudioCtx() {
-  if (!audioCtx && window.AudioContext) audioCtx = new AudioContext();
-  return audioCtx;
+const audioCtx = window.AudioContext ? new AudioContext() : null;
+
+function tonoSecuencia(frecuencias, duracion = 0.15, gap = 0.05) {
+  if (silenciado || !audioCtx) return;
+  let t = audioCtx.currentTime;
+  frecuencias.forEach(f => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.frequency.value = f;
+    gain.gain.value = volumen * 0.3;
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + duracion);
+    t += duracion + gap;
+  });
 }
 
-function beep(frecuencia = 880, duracion = 0.2) {
-  if (silenciado) return;
-  const ctx = obtenerAudioCtx();
-  if (!ctx) return;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.frequency.value = frecuencia;
-  gain.gain.value = volumen * 0.3;
-  osc.connect(gain).connect(ctx.destination);
-  osc.start();
-  osc.stop(ctx.currentTime + duracion);
+function probarAlerta(tipo) {
+  if (tipo === "critico") tonoSecuencia([880, 1046, 1318]);
+  else if (tipo === "advertencia") tonoSecuencia([660, 660]);
+  else tonoSecuencia([523, 659, 784]);
+
+  fetch(`${API_BASE}/alertas/test/${tipo}`, { method: "POST" }).catch(() => {});
 }
 
 function toggleSilencio() {
   silenciado = !silenciado;
   const btn = document.getElementById("btnSilenciar");
   btn.textContent = silenciado ? "🔇 Silenciado" : "🔊 Silenciar";
-  btn.setAttribute("aria-pressed", String(silenciado));
+  btn.className = silenciado ? "silenciado" : "";
   fetch(`${API_BASE}/alertas/silenciar`, {
     method: "POST", headers: {"Content-Type":"application/json"},
     body: JSON.stringify({ silenciar: silenciado }),
@@ -411,112 +577,29 @@ function ajustarVolumen(valor) {
   }).catch(() => {});
 }
 
+/* ---------- Exportar ---------- */
 function exportarPDF() {
   window.open(`${API_BASE}/reporte`, "_blank");
 }
 
-/* ============================================================
-   Actividad sismica mundial por pais (USGS)
-   Reutiliza la misma logica que mapa.html: descarga el contorno
-   de los paises, descarga los sismos recientes del USGS y asigna
-   cada sismo a su pais con punto-en-poligono (turf.js). Se usa
-   solo para llenar la tabla "Paises con actividad sismica ahora".
-   ============================================================ */
-
-const USGS_FEED = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson";
-const PAISES_GEOJSON_URL = "https://raw.githubusercontent.com/datasets/geo-countries/main/data/countries.geojson";
-const INTERVALO_PAISES_MS = 60000; // 1 minuto, igual que el mapa
-const UMBRAL_GRAVE_PAIS = 4.5;
-
-let geojsonPaisesDashboard = null;
-
-async function cargarGeoJSONPaisesDashboard() {
-  if (geojsonPaisesDashboard) return geojsonPaisesDashboard;
-  const res = await fetch(PAISES_GEOJSON_URL);
-  geojsonPaisesDashboard = await res.json();
-  return geojsonPaisesDashboard;
+function exportarCSV() {
+  if (ultimasLecturas.length === 0) return;
+  const encabezado = "sensor_id,value,unit,timestamp\n";
+  const filas = ultimasLecturas.map(l => `${l.sensor_id},${l.value},${l.unit},${l.timestamp}`).join("\n");
+  const blob = new Blob([encabezado + filas], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `SIPIA_lecturas_${new Date().toISOString().slice(0,19).replace(/[:T]/g,"-")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
-function pertenecePais(punto, pais) {
-  try {
-    if (pais.geometry.type === "Polygon") {
-      return turf.booleanPointInPolygon(punto, pais.geometry);
-    } else if (pais.geometry.type === "MultiPolygon") {
-      return pais.geometry.coordinates.some(coords =>
-        turf.booleanPointInPolygon(punto, turf.polygon(coords).geometry)
-      );
-    }
-  } catch (e) { /* geometria invalida, se ignora */ }
-  return false;
-}
-
-async function actualizarPaisesConSismos() {
-  const tbody = document.getElementById("tablaPaises");
-  try {
-    const [geojsonPaises, resFeed] = await Promise.all([
-      cargarGeoJSONPaisesDashboard(),
-      fetch(USGS_FEED),
-    ]);
-    const data = await resFeed.json();
-
-    const statsPorPais = {};
-
-    data.features.forEach(f => {
-      const [lon, lat] = f.geometry.coordinates;
-      const mag = f.properties.mag ?? 0;
-      const esTsunami = f.properties.tsunami === 1;
-      const punto = turf.point([lon, lat]);
-
-      for (const pais of geojsonPaises.features) {
-        if (pertenecePais(punto, pais)) {
-          const nombre = pais.properties.name || pais.properties.NAME || "País";
-          if (!statsPorPais[nombre]) statsPorPais[nombre] = { count: 0, maxMag: 0, tsunamis: 0 };
-          statsPorPais[nombre].count += 1;
-          statsPorPais[nombre].maxMag = Math.max(statsPorPais[nombre].maxMag, mag);
-          if (esTsunami) statsPorPais[nombre].tsunamis += 1;
-          break;
-        }
-      }
-    });
-
-    const filas = Object.entries(statsPorPais)
-      .map(([nombre, stats]) => ({ nombre, ...stats }))
-      .sort((a, b) => b.maxMag - a.maxMag || b.count - a.count);
-
-    if (filas.length === 0) {
-      tbody.innerHTML = `<tr class="fila-vacia"><td colspan="5">Sin países con sismos detectados en las últimas 24h</td></tr>`;
-    } else {
-      tbody.innerHTML = filas.map(f => {
-        const grave = f.maxMag >= UMBRAL_GRAVE_PAIS;
-        const clases = [grave ? "fila-grave" : "fila-moderada", f.tsunamis > 0 ? "fila-tsunami" : ""].join(" ").trim();
-        return `<tr class="${clases}">
-          <td>${escapar(f.nombre)}</td>
-          <td>${f.count}</td>
-          <td>${f.maxMag.toFixed(1)}</td>
-          <td>${f.tsunamis > 0 ? `🌊 ${f.tsunamis}` : "—"}</td>
-          <td>${grave ? "⚠ Grave" : "Moderado/Leve"}</td>
-        </tr>`;
-      }).join("");
-    }
-
-    document.getElementById("horaActualizacionPaises").textContent =
-      `Actualizado ${new Date().toLocaleTimeString()} · ${filas.length} país(es) con actividad`;
-
-  } catch (err) {
-    console.error("Error cargando actividad sismica por pais:", err);
-    tbody.innerHTML = `<tr class="cargando-paises"><td colspan="5">No se pudo cargar la actividad sísmica mundial. Reintentando…</td></tr>`;
-    document.getElementById("horaActualizacionPaises").textContent = "Error de conexión con USGS";
-  }
-}
-
-/* --- Inicializacion --- */
+/* ---------- Inicializacion ---------- */
 SENSORES.forEach(crearTarjetaSensor);
+crearChartSeveridad();
 actualizarDashboard();
-cicloNormal();
-
-actualizarPaisesConSismos();
-setInterval(actualizarPaisesConSismos, INTERVALO_PAISES_MS);
+setInterval(actualizarDashboard, INTERVALO_MS);
 </script>
 </body>
 </html>
-
